@@ -1,0 +1,223 @@
+<!DOCTYPE HTML>
+<html ng-app="app">
+<head>
+<title>成绩单</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport"
+          content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,minimal-ui"/>
+
+<meta content="yes" name="apple-mobile-web-app-capable" />
+<meta content="yes" name="apple-touch-fullscreen" />
+<meta content="telephone=no" name="format-detection" />
+<meta content="black" name="apple-mobile-web-app-status-bar-style" />
+<link rel="stylesheet" href="/zz/public/css/main.css" />
+<link rel="stylesheet" href="/zz/public/css/weui.css" />
+ <link rel="stylesheet" href="/zz/public/css/weui2.css"/>
+  <link rel="stylesheet" href="/zz/public/css/weui3.css"/>
+<script src="/zz/public/widgets/zeptojs/zepto.min.js"></script>
+<script src="/zz/public/widgets/dropload/dropload.min.js"></script>
+<script src="/zz/public/widgets/angularjs/angular.min.js"></script>
+<script src="/zz/public/widgets/angularjs/angular-touch.min.js"></script>
+ <script src="/zz/public/js/zepto.min.js"></script> 
+<script>
+
+        angular.module('app', ['ngTouch'])
+                .value('appValue', {
+                    index: 1,
+                    size: 10
+                })
+                .factory('agentRemote', ['$http', 'appValue', function ($http, appValue) {
+                    return {
+                    	queryExam: function(index, size, searchText) {
+                            return $http({
+                                method: 'GET',
+                                url: '/zz/mobile/WorkService/queryExam',
+                                params: {
+                                    PAGE_INDEX: index || appValue.index,
+                                    PAGE_SIZE: size || appValue.size
+                                }
+                            })
+                        }
+                    }
+                }])
+                .factory('delRemote',['$http', 'appValue',function($http, appValue){
+                	return {
+                		delDate :function(examId){
+                			return $http({
+                				method:'POST',
+                				url:'/zz/mobile/WorkService/delExam',
+                				params:{
+                					examId:examId
+                				}
+                			});
+                		}
+                	}
+                }])
+                .controller('MainController', ['$scope', 'appValue','agentRemote','delRemote','$timeout', function ($scope, appValue,agentRemote,delRemote,$timeout) {
+                	$scope.examTotal = 0;
+                    $scope.examList = [];
+                    $scope.isTeacher = ${wxUser.isTeacher};
+                    $scope.examObj = {
+                    		examId:'',
+                    		examTitle:''
+                    }
+                  //next page function
+                    $scope.nextPage = function (me) {
+                        agentRemote.queryExam(++appValue.index).then(function (response) {
+                        	 $scope.examList = $scope.examList.concat(response.data.data.data);
+                            if (me && me.resetload)
+                                me.resetload();
+
+                        }, function (response) {
+                            //err
+                        });
+                    };
+                	//init page function
+                    $scope.initPage = function (me) {
+                		console.log("考试列表")
+                        appValue.index = 1;
+                        agentRemote.queryExam(1).then(function (response) {
+                            $scope.examTotal = response.data.data.total;
+                            $scope.examList = response.data.data.data;
+                            if(${wxUser.isTeacher} || ${wxUser.isCommittee}){
+                           	 loadScript("/zz/public/js/slideleft.js", function() {})
+                           }
+                            if (me && me.resetload)
+                                me.resetload();
+
+                        }, function (response) {
+                            //err
+                        });
+                	};
+                	 $scope.showFade = function(id,title){
+                       	$scope.examObj.examId = id;
+                       	$scope.examObj.examTitle = title;
+                       	delRemote.delDate($scope.examObj.examId).then(function(response){
+                      		 $scope.initPage();
+                      	},function(){
+                      	});
+                       	//$("#dialog_title").html("确定删除,"+$scope.examObj.examTitle+"吗？")
+                        //$('#iosDialog1').fadeIn(200);
+                       }
+                       $scope.hideFade = function(){
+                       	$('#iosDialog1').fadeOut(200);
+                       }
+                       $scope.del = function(me){
+                       	//$('#iosDialog1').fadeOut(200);
+                       }
+                	//执行初始化方法
+                	$scope.initPage();
+                	
+                	$('#scroller').dropload({
+                        domUp: {
+                            domClass: 'dropload-up',
+                            domRefresh: '<div class="dropload-refresh">↓下拉刷新</div>',
+                            domUpdate: '<div class="dropload-update">↑释放更新</div>',
+                            domLoad: '<div class="dropload-load"><span class="loading"></span>加载中...</div>'
+                        },
+                        domDown: {
+                            domClass: 'dropload-down',
+                            domRefresh: '<div class="dropload-refresh">↑上拉加载更多</div>',
+                            domUpdate: '<div class="dropload-update">↓释放加载</div>',
+                            domLoad: '<div class="dropload-load"><span class="loading"></span>加载中...</div>'
+                        },
+                        scrollArea: window,
+                        loadUpFn: function (me) {
+                            $scope.initPage(me);
+                            console.log('down');
+                            if(${wxUser.isTeacher} || ${wxUser.isCommittee}){
+                              	 loadScript("/zz/public/js/slideleft.js", function() {})
+                              }
+                        },
+                        loadDownFn: function (me) {
+                            $scope.nextPage(me);
+                            console.log('up');
+                            if(${wxUser.isTeacher} || ${wxUser.isCommittee}){
+                              	 loadScript("/zz/public/js/slideleft.js", function() {})
+                              }
+                        }
+                    });
+                }]);
+    </script>
+</head>
+
+<body ng-cloak ng-controller="MainController" style="background-color:white;">
+<div class="main">
+  <div class="row" style="width:98%">
+    <h3  class="padded-b-10 border-b  padded-t-10 text-default" style="background-color:white;">${wxUser.currentClass.className}成绩单
+      <input  ng-if="${wxUser.isTeacher} || ${wxUser.isCommittee}" type="button" class="btn-blue btn fr margin-l-10" onClick="window.location='/zz/mobile/W/examAdd'" value="公布成绩单"/>
+    </h3>
+    <div class="content" id="scroller">
+      <!-- <div class="clearfix posrel" ng-repeat="examInfo in examList"> 
+      <h3 class="padded-t-10 font-weight-b ellipsis-2 text-main">
+      	<span>{{examInfo.exam.examTitle}}</span>
+      	<a id="showIOSDialog1" ng-if="${wxUser.isTeacher} || ${wxUser.isCommittee}" href="javascript:;" ng-click="showFade('{{examInfo.exam.examId}}','{{examInfo.exam.examTitle}}')"  class="weui-btn weui-btn_mini weui-btn_warn">删除</a>
+      	</h3>
+        <a href="/zz/mobile/W/examDetail?examId={{examInfo.exam.examId}}">
+	        <div>
+	          <p class="margin-t-10 margin-b-10 font-size-13"><span class="padded-r-10">平均：{{examInfo.mma.avg}}分</span><span class="padded-r-10">最高：{{examInfo.mma.max}}分</span><span class="padded-r-10">最低：{{examInfo.mma.min}}分</span></p>
+	        </div>
+        </a> 
+        <div class="hr"></div>
+      </div>
+       -->
+       <div class="weui_cells" ng-repeat="examInfo in examList">
+	    <ul class="list weui_cell slidelefts" >
+			        <li class="weui_cell_bd weui_cell_primary " >
+			          <h3 class="padded-t-10 font-weight-b ellipsis-2 text-main">{{examInfo.exam.examTitle}}
+			          </h3>
+			            <a href="/zz/mobile/W/examDetail?examId={{examInfo.exam.examId}}"> 
+			                <p class="margin-t-10 margin-b-10 font-size-13"><span class="padded-r-10">平均：{{examInfo.avg}}分</span><span class="padded-r-10">最高：{{examInfo.max}}分</span><span class="padded-r-10">最低：{{examInfo.min}}分</span></p>
+			            </a>
+			        </li>
+			        <div class="slideleft">
+	                		<span class="bg-red f-white dels" style="width: 100px;" ng-click="showFade('{{examInfo.exam.examId}}','{{examInfo.exam.examTitle}}')">删除</span>
+	                </div>
+	      </ul>
+    </div>
+       
+       
+      <div class="dropload-down">
+        <div class="dropload-refresh">上拉加载更多</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="dialogs">
+        <!--BEGIN dialog1-->
+        <div class="js_dialog" id="iosDialog1" style="display: none;">
+            <div class="weui-mask"></div>
+            <div class="weui-dialog">
+                <div class="weui-dialog__hd"><strong class="weui-dialog__title">删除提示</strong></div>
+                <div class="weui-dialog__bd" id="dialog_title"></div>
+                <div class="weui-dialog__ft">
+                    <a href="javascript:;" ng-click="hideFade()" class="weui-dialog__btn weui-dialog__btn_default">取消</a>
+                    <a href="javascript:;" ng-click="del()"class="weui-dialog__btn weui-dialog__btn_primary">确定</a>
+                </div>
+            </div>
+        </div>
+</div>
+</body>
+<script type="text/javascript">
+function loadScript(url, callback) {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    if (typeof(callback) != "undefined") {
+        if (script.readyState) {
+            script.onreadystatechange = function() {
+                if (script.readyState == "loaded" || script.readyState == "complete") {
+                    script.onreadystatechange = null;
+                    callback();
+                }
+            };
+        } else {
+            script.onload = function() {
+                callback();
+            };
+        }
+    };
+    script.src = url;
+    document.body.appendChild(script);
+}
+</script>
+</html>

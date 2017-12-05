@@ -1,0 +1,306 @@
+<!DOCTYPE HTML>
+<html ng-app="app">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport"content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,minimal-ui"/>
+<meta content="yes" name="apple-mobile-web-app-capable" />
+<meta content="yes" name="apple-touch-fullscreen" />
+<meta content="telephone=no" name="format-detection" />
+<meta content="black" name="apple-mobile-web-app-status-bar-style" />
+<link rel="stylesheet" href="/zz/public/css/main.css" />
+<link rel="stylesheet" href="/zz/public/css/weui.css">
+<link rel="stylesheet" href="/zz/public/css/weui2.css"/>
+<link rel="stylesheet" href="/zz/public/css/weui3.css"/>
+<script src="/zz/public/widgets/layer.m/layer.m.js"></script>
+<script src="/zz/public/widgets/zeptojs/zepto.min.js"></script>
+<script src="/zz/public/widgets/dropload/dropload.min.js"></script>
+<script src="/zz/public/widgets/angularjs/angular.min.js"></script>
+<script src="/zz/public/widgets/angularjs/angular-touch.min.js"></script>
+<script src="http://res.wx.qq.com/open/js/jweixin-1.2.0.js"></script>
+<style type="text/css">
+.icon{
+  font-size: 24px;
+  line-height: 40px;
+  color:red;
+  position:fixed; 
+  display: none;
+}
+.icon:hover{
+  font-size: 32px;
+}
+</style>
+</head>
+<script type="text/javascript">
+var openId = '${wxUser.wxOpenId}';
+var vnoId = '1';
+var params = [];
+var ids="";
+var showFlag = 0;
+var url = window.location.href.split('#')[0];
+var ajaxReturn = $.ajax({url:"/zz/Weixin/getWxSdkInfo", data: {url: url,openId:openId,vnoId:vnoId}});
+ajaxReturn.done(function (data) {
+	var appId = data.appId,
+    signature = data.signature,
+    timestamp = data.timestamp,
+    nonce = data.nonce;
+	 wx.config({
+         debug: false, // 开启调试模式,调用的所有api的返回值会在客户端alert出来，若要查看传入的参数，可以在pc端打开，参数信息会通过log打出，仅在pc端时才会打印。
+         appId: appId, // 必填，公众号的唯一标识
+         timestamp: timestamp, // 必填，生成签名的时间戳
+         nonceStr: nonce, // 必填，生成签名的随机串
+         signature: signature,// 必填，签名，见附录1
+         jsApiList: ['chooseImage', 'uploadImage', 'closeWindow', 'previewImage'] // 必填，需要使用的JS接口列表，所有JS接口列表见附录2
+     });
+});
+angular.module('app', ['ngTouch'])
+.value('appValue', {
+    index: 1,
+    size: 10
+})
+.factory('agentRemote',['$http','appValue',function($http, appValue){
+		return {
+			getData:function(index,size,searchText){
+				return $http({
+					method:'GET',
+					url:'/zz/mobile/ActivityService/queryAlbumImageList',
+					params:{
+						PAGE_INDEX: index || appValue.index,
+                         PAGE_SIZE: size || appValue.size,
+                         albumId:'${albumId}'
+					}
+				});
+			}
+			
+		}
+}])
+.factory('agentAlbumImage',['$http','appValue',function($http, appValue){
+	return {
+		saveAlbumImage:function(obj){
+			return $http({
+				method:'POST',
+				url:'/zz/mobile/ActivityService/saveAlbumImage',
+				params:{
+					fileId:obj.fileId,
+					albumId:obj.albumId
+				}
+			})
+		}
+	}
+}])
+.factory('remote',['$http','appValue',function($http, appValue){
+	return {
+		del:function(albumImageId){
+			return $http({
+				method:'POST',
+				url:'/zz/mobile/ActivityService/delAlbumImage',
+				params:{
+					albumImageId:albumImageId
+				}
+			})
+		}
+	}
+}])
+.controller('MainController',['$scope','appValue','agentRemote','agentAlbumImage','remote','$timeout',function($scope, appValue, agentRemote,agentAlbumImage,remote,$timeout){
+			 $scope.lists = [];
+			 $scope.urls = Array();
+			 $scope.albumImage = {
+					 fileId:'',
+					 albumId:'${albumId}'
+			 }
+			/*  $scope.nextPage = function(me){
+				 agentRemote.getData(++appValue.index).then(function(response){
+					 $scope.lists = $scope.lists.concat(response.data.data.data);
+					 if (me && me.resetload)
+                         me.resetload();
+				 },function(response){
+					 
+				 })
+			 }; */
+			 //init page function
+			 $scope.initPage = function (me) {
+				   appValue.index = 1;
+		            agentRemote.getData(1).then(function (response) {
+                        $scope.total = response.data.data.total;
+                        $scope.lists = response.data.data.data;
+                        for(var i=0;i<$scope.lists.length;i++){
+                        	ids+='#'+$scope.lists[i].albumImageId+",";
+                        }
+                        if (me && me.resetload)
+                            me.resetload();
+
+                    }, function (response) {
+                        //err
+                    });
+			 };
+			 $scope.uploadImage = function(strs){
+				    wx.uploadImage({
+                        localId: strs[idx],
+                        isShowProgressTips: 1,
+                        success: function (res) {
+                            var serverId = res.serverId; // 返回图片的服务器端ID
+                            $.ajax({url:'/zz/mobile/A/uploadAlbum',data:{
+                                url:serverId,openId:openId
+                            }}).done(function(res){
+                                if (res.ret=="0"&&res.data) {
+                                   	 $scope.albumImage.fileId =res.data.fileId;
+                                   	 agentAlbumImage.saveAlbumImage($scope.albumImage);
+                                   	  // 插入到预览区  
+                                        var $preview = $('<li class="weui-uploader__file" style="background-image:url(/zz' + res.data.fileUrl + ')"><span class="icon icon-72 icontype" ng-click="del('+res.data.albumImageId+')"></span></li>'); 
+                                   	  /* if($scope.lists.length > 0){
+                                   		 $('#lightgallery').append($preview);  
+                                   	 }else{
+                                   		 $("#uploadnoUl").append($preview);
+                                   	 } */
+                                 	 $scope.initPage();
+                                   	 idx++;
+                                   	 if(idx < strs.length){
+                                   		 $scope.uploadImage(strs);
+                                   	 }
+                                }else{
+                                	//上传失败
+                                	layer.open({
+                                        content: res.desc,
+                                        btn: ['知道了']
+                                    });
+                                }
+                            }).fail(function(){
+                                layer.open({
+                                    content: '上传失败,请稍后再试',
+                                    btn: ['知道了']
+                                });
+                            })
+                        },
+                        error: function () {
+                            layer.open({
+                                content: '上传失败,请稍后再试',
+                                btn: ['知道了']
+                            });
+                        }
+                    });
+			 }
+			 //loadShow();
+			 var idx = 0;
+			 $scope.chooseImage = function(){
+				// 选择张片
+                 wx.chooseImage({
+                     count: 9, // 默认9
+                     sizeType: ['original', 'compressed'], // 可以指定是原图还是压缩图，默认二者都有
+                     sourceType: ['album', 'camera'], // 可以指定来源是相册还是相机，默认二者都有
+                     success: function(res) {
+                         var localIds = res.localIds; // 返回选定照片的本地ID列表，localId可以作为img标签的src属性显示图片
+                         var str = localIds.toString();
+                         var index = str.indexOf(',');
+                         var strs = str.split(',');
+                         var flag = true;
+                         $scope.uploadImage(strs);
+                     }
+                 });
+			 };
+			 $scope.readImage = function(url){
+				 if(0 == showFlag){
+					 var http = window.location.href.split('.com');
+					 for(i = 0;i<$scope.lists.length;i++){
+						 $scope.urls.push(http[0]+'.com/zz'+$scope.lists[i].fileUrl);
+	                 }
+					 wx.previewImage({
+						    current:http[0]+'.com'+url, // 当前显示图片的http链接
+						    urls:$scope.urls // 需要预览的图片http链接列表
+						});
+				 }
+			 }
+			 $scope.del = function(id){
+				  remote.del(id).then(function(response){
+					  $("#"+id).remove();
+					  //$scope.initPage();
+				  })
+			 }
+			 $scope.initPage();
+}])
+</script>
+<body ng-cloak ng-controller="MainController">
+<div id="text" class="page">
+    <div class="page__bd">
+        <div class="weui-gallery" id="gallery"> 
+            <span class="weui-gallery__img" id="galleryImg"></span>
+            <div class="weui-gallery__opr">
+                 <a href="javascript:" class="weui-gallery__del">
+                    <i class="weui-icon-delete weui-icon_gallery-delete"></i>
+                </a>
+            </div>
+        </div>
+        <div class="weui-cells weui-cells_form">
+            <div class="weui-cell">
+                <div class="weui-cell__bd">
+                    <div class="weui-uploader">
+                        <div class="weui-uploader__bd" id="uploaderFiles"  ng-show="lists.length!=0">
+                            <ul id="lightgallery" class="weui-uploader__files" class="uploadUl" >
+                                <li id="{{image.albumImageId}}"  class="weui-uploader__file litype" style="background-image:url(/zz{{image.fileUrl}})" ng-click="readImage('/zz{{image.fileUrl}}')"  ng-repeat="image in lists" >
+                                 <span class="icon icon-72 icontype" ng-click="del('{{image.albumImageId}}')"></span>
+                                </li> 
+                            </ul>
+                            <div class="weui-uploader__input-box">
+                                <input id="uploaderInput" class="weui-uploader__input" type="button" ng-click="chooseImage()" />
+                            </div>
+                            <div class="weui-uploader__input-box-edit" ng-if="${wxUser.isTeacher} || ${wxUser.isCommittee}"  onclick="showDel()">
+                            </div>
+                        </div>
+                        <div class="weui-uploader__bd" id="uploaderFiles"  ng-show="lists.length==0">
+                         	<ul class="weui-uploader__files" id="uploadnoUl">
+                            </ul>
+                            <div class="weui-uploader__input-box">
+                                <input id="uploaderInput" class="weui-uploader__input" type="button" ng-click="chooseImage()" />
+                            </div>
+                            <div class="weui-uploader__input-box-edit" ng-if="${wxUser.isTeacher} || ${wxUser.isCommittee}"  onclick="showDel()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+   <!--  <div class="page__ft">
+        <a href="javascript:home()"><img src="./images/icon_footer_link.png" /></a>
+    </div> -->
+</div>
+</body>
+<script type="text/javascript">
+function loadShow(){
+	  var tmpl = '<li class="weui-uploader__file" style="background-image:url(url)"></li>',
+      $gallery = $("#gallery"), $galleryImg = $("#galleryImg"),
+      $uploaderFiles = $("#uploaderFiles");
+
+	  $uploaderFiles.on("click", "li", function(){
+	      $galleryImg.attr("style", this.getAttribute("style"));
+	      $gallery.fadeIn(100);
+	  });
+	  $gallery.on("click", function(){
+	      $gallery.fadeOut(100);
+	  });
+}
+
+$.fn.longPress = function(fn) {
+    var timeout = undefined;
+    var $this = this;
+    for(var i = 0;i<$this.length;i++){
+        $this[i].addEventListener('touchstart', function(event) {
+            timeout = setTimeout(fn(this), 800);  //长按时间超过800ms，则执行传入的方法
+            }, false);
+        $this[i].addEventListener('touchend', function(event) {
+            clearTimeout(timeout);  //长按时间少于800ms，不会执行传入的方法
+            }, false);
+    }
+}
+function showDel(){
+	var res = $('.icontype').css('display');
+	if('block' == res){
+		showFlag = 0;
+		$(".icontype").css("display",'none');
+	}else{
+		showFlag = 1;
+		$(".icontype").css("display",'block');
+	}
+	
+}
+</script>
+</html>

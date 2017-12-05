@@ -1,0 +1,114 @@
+<!DOCTYPE HTML>
+<html ng-app="app">
+<head>
+<title>相册选择照片</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport"
+          content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,minimal-ui"/>
+
+<meta content="yes" name="apple-mobile-web-app-capable" />
+<meta content="yes" name="apple-touch-fullscreen" />
+<meta content="telephone=no" name="format-detection" />
+<meta content="black" name="apple-mobile-web-app-status-bar-style" />
+<link rel="stylesheet" href="/zz/public/css/main.css" />
+
+<script src="/zz/public/widgets/zeptojs/zepto.min.js"></script>
+<script src="/zz/public/widgets/dropload/dropload.min.js"></script>
+<script src="/zz/public/widgets/angularjs/angular.min.js"></script>
+<script src="/zz/public/widgets/angularjs/angular-touch.min.js"></script>
+<script type="text/javascript">
+angular.module('app', ['ngTouch'])
+			.value('appValue', {
+			    index: 1,
+			    size: 10
+			})
+			.factory('agentRemote',['$http','appValue',function($http, appValue){
+			return {
+				getData:function(index,size,searchText){
+					return $http({
+						method:'GET',
+						url:'/zz/mobile/ActivityService/queryAlbumList',
+						params:{
+							PAGE_INDEX: index || appValue.index,
+                            PAGE_SIZE: size || appValue.size
+						}
+					});
+				}
+				
+			}
+		}])
+		.controller('MainController',['$scope','appValue','agentRemote','$timeout',function($scope, appValue, agentRemote,$timeout){
+			 $scope.lists = [];
+			 $scope.nextPage = function(me){
+				 agentRemote.getData(++appValue.index).then(function(response){
+					 $scope.lists = $scope.lists.concat(response.data.data.data);
+					 if (me && me.resetload)
+                         me.resetload();
+				 },function(response){
+					 
+				 })
+			 };
+			 //init page function
+			   $scope.initPage = function (me) {
+				   appValue.index = 1;
+		            agentRemote.getData(1).then(function (response) {
+                        $scope.total = response.data.data.total;
+                        $scope.lists = response.data.data.data;
+                        console.log($scope.lists);
+                        if (me && me.resetload)
+                            me.resetload();
+
+                    }, function (response) {
+                        //err
+                    });
+			 };
+			 
+		}])
+</script>
+</head>
+
+<body>
+<div class="main">
+  <div class="row">
+    <h3 class="padded-b-10 border-b  padded-t-10 margin-b-10 text-default font-weight-b">选择照片</h3>
+    <div class="waterfall">
+      <div class="item active"><i></i><b></b><img src="../images/article_04.jpg"></div>
+      <div class="item active"><i></i><b></b><img src="../images/file.png"></div>
+      <div class="item active"><i></i><b></b><img src="../images/file01.png"></div>
+      <div class="item active"><i></i><b></b><img src="../images/article_04.jpg"></div>
+      <div class="item active"><i></i><b></b><img src="../images/file.png"></div>
+      <div class="item"><i></i><b></b><img src="../images/file01.png"></div>
+      <div class="item active"><i></i><b></b><img src="../images/file_01.jpg"></div>
+      <div class="item active"><i></i><b></b><img src="../images/file_02.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_03.jpg"></div>
+      <div class="item active"><i></i><b></b><img src="../images/file_04.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_05.jpg"></div>
+      <div class="item active"><i></i><b></b><img src="../images/file_06.jpg"></div>
+      <div class="item active"><i></i><b></b><img  src="../images/file_02.jpg"></div>
+      <div class="item active"><i></i><b></b><img src="../images/file_03.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_04.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_05.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_06.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_03.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_02.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_01.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_05.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_06.jpg"></div>
+      <div class="item active"><i></i><b></b><img src="../images/file_03.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_01.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_05.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_02.jpg"></div>
+      <div class="item active"><i></i><b></b><img src="../images/file_04.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_06.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_03.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_01.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_05.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_02.jpg"></div>
+      <div class="item"><i></i><b></b><img src="../images/file_06.jpg"></div>
+    </div>
+  </div>
+  <div class="height"></div>
+  <div class="file_next"><a href="/mobile/A/albumList">生成相册</a></div>
+</div>
+</body>
+</html>

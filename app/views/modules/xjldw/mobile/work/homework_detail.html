@@ -1,0 +1,143 @@
+<!DOCTYPE HTML>
+<html ng-app="app">
+<head>
+<title>作业详情</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport"
+          content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,minimal-ui"/>
+
+<meta content="yes" name="apple-mobile-web-app-capable" />
+<meta content="yes" name="apple-touch-fullscreen" />
+<meta content="telephone=no" name="format-detection" />
+<meta content="black" name="apple-mobile-web-app-status-bar-style" />
+<link rel="stylesheet" href="/zz/public/css/main.css" />
+<script src="/zz/public/js/jquery-1.9.1.min.js"></script>
+<script src="/zz/public/widgets/zeptojs/zepto.min.js"></script>
+<script src="/zz/public/widgets/dropload/dropload.min.js"></script>
+<script src="/zz/public/widgets/angularjs/angular.min.js"></script>
+<script src="/zz/public/widgets/angularjs/angular-touch.min.js"></script>
+<script src="http://res.wx.qq.com/open/js/jweixin-1.2.0.js"></script>
+<script>
+var openId = '${wxUser.wxOpenId}';
+var vnoId = '1';
+var params = [];
+var url = window.location.href.split('#')[0];
+var ajaxReturn = $.ajax({url:"/zz/Weixin/getWxSdkInfo", data: {url: url,openId:openId,vnoId:vnoId}});
+ajaxReturn.done(function (data) {
+	var appId = data.appId,
+    signature = data.signature,
+    timestamp = data.timestamp,
+    nonce = data.nonce;
+	 wx.config({
+         debug: false, // 开启调试模式,调用的所有api的返回值会在客户端alert出来，若要查看传入的参数，可以在pc端打开，参数信息会通过log打出，仅在pc端时才会打印。
+         appId: appId, // 必填，公众号的唯一标识
+         timestamp: timestamp, // 必填，生成签名的时间戳
+         nonceStr: nonce, // 必填，生成签名的随机串
+         signature: signature,// 必填，签名，见附录1
+         jsApiList: ['chooseImage', 'uploadImage', 'closeWindow', 'previewImage'] // 必填，需要使用的JS接口列表，所有JS接口列表见附录2
+     });
+});
+        angular.module('app', ['ngTouch'])
+                .value('appValue', {
+                    index: 1,
+                    size: 10
+                })
+                .factory('agentRemote', ['$http', 'appValue', function ($http, appValue) {
+                    return {
+                    	queryHomeworkRemarkList: function(homeworkId) {
+                            return $http({
+                                method: 'GET',
+                                url: '/zz/mobile/WorkService/queryHomeworkRemarkList',
+                                params: {
+                                	homeworkId:homeworkId
+                                }
+                            })
+                        },
+                        getDate:function(id){
+                        	return $http({
+                        		 method: 'GET',
+                                 url: '/zz/mobile/W/queryHomeWorkDetail',
+                                 params: {
+                                 	homeworkId:id
+                                 }
+                        	})
+                        }
+                        
+                    }
+                }])
+                .controller('MainController', ['$scope', 'appValue','agentRemote','$timeout', function ($scope, appValue,agentRemote,$timeout) {
+                	//init page function
+                	$scope.remarkList = 0;
+                	$scope.remarkList = [];
+                	$scope.homework=[];
+                	$scope.urls = Array();
+                    $scope.initPage = function (me) {
+                    	agentRemote.getDate(${homeworkId}).then(function(response){
+                    		$scope.homework = response.data.data;
+                    	})
+                    	console.log("初始化标榜列表");
+                		agentRemote.queryHomeworkRemarkList(${homeworkId}).then(function (response) {
+                            $scope.remarkTotal = response.data.data.total;
+                            $scope.remarkList = response.data.data.data;
+                            console.log($scope.remarkList);
+                            if (me && me.resetload)
+                                me.resetload();
+
+                        }, function (response) {
+                            //err
+                        });
+                    };
+                    $scope.readImage = function(url){
+                    	var http = window.location.href.split('.com');
+                    	for(i = 0;i<$scope.remarkList.length;i++){
+       					 $scope.urls.push(http[0]+'.com/zz'+$scope.remarkList[i].modelContent);
+                        }
+                    	 wx.previewImage({
+     					    current:http[0]+'.com'+url, // 当前显示图片的http链接
+     					    urls:$scope.urls // 需要预览的图片http链接列表
+     					});
+                    }
+                    $scope.readImage2 = function(url){
+                    	var http = window.location.href.split('.com');
+                    	for(i = 0;i<$scope.homework.fileList.length;i++){
+       					 $scope.urls.push(http[0]+'.com/zz'+$scope.homework.fileList[i].fileUrl);
+                        }
+                    	 wx.previewImage({
+     					    current:http[0]+'.com'+url, // 当前显示图片的http链接
+     					    urls:$scope.urls // 需要预览的图片http链接列表
+     					});
+                    }
+                    $scope.initPage();
+                }]);
+    </script>
+</head>
+<body  ng-cloak ng-controller="MainController">
+<div class="main">
+  <div class="row">
+    <div class="content padded-b-15">
+      <h2 class="text-center margin-b-15 margin-t-15">{{homework.homeworkTitle}}</h2>
+      <h5 class="text-center padded-b-10"><span>科目: {{homework.subjectTitle}}</span><span class="padded-l-10">{{homework.time}}</span></h5>
+      <div class="border-b posrel margin-t-20 padded-t-20"><div class="homework_title">作业</div></div>
+      <div class="padded-10" style="white-space:pre-line;">
+      	<div  ng-repeat="homework in homework.fileList">
+      		<img src="/zz{{homework.fileUrl}}"  width="100%" ng-click="readImage2('/zz{{homework.fileUrl}}')"/>
+      	</div> 
+      	<p class="padded-b-10 text-main">{{homework.homeworkContent}}</p>
+      </div>
+       <div class="border-b posrel margin-t-20 padded-t-20"><div class="homework_title">标榜</div></div>
+      <div class="padded-10 padded-t-20">
+        <input  ng-if="${wxUser.isTeacher} || ${wxUser.isCommittee}"  type="button" value="添加标榜" class="wid30 btn btn-blue" onClick="window.location='/zz/mobile/W/homeworkAddRemark?homeworkId=${homeworkId}'"/>
+      </div>
+      <div class="padded-10 border-b padded-t-20" ng-repeat="remark in remarkList">
+        {{remark.modelTitle}}<br/>
+        <img src="/zz{{remark.modelContent}}" ng-click="readImage('/zz{{remark.modelContent}}')"  width="40%" height="10%">
+      </div>
+      	
+    </div>
+    <div class="margin-t-15 margin-b-15 text-right">
+    <input type="button" class="btn padded-l-20 padded-r-20 btn-white" onClick="window.location='/zz/mobile/W/homeworkList'" value="返回"/>
+    </div>
+  </div>
+</div>
+</body>
+</html>
