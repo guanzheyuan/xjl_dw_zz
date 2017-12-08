@@ -48,6 +48,7 @@ import controllers.modules.mobile.bo.XjlDwWxStudentBo;
 import controllers.modules.mobile.filter.MobileFilter;
 import controllers.modules.mobile.bo.XjlDwNoticeBo;
 import utils.DateUtil;
+import utils.MsgPush;
 import utils.StringUtil;
 
 /**
@@ -125,6 +126,8 @@ public class WorkService extends MobileFilter {
         	}
         }
         //WorkService.initExamGrad(exam.examId,subjectList);
+        String content = "<a href='http://dw201709.com/zz/mobile/W/examList'>【"+exam.examTitle+"】</a>有新考试,赶紧录入孩子的成绩吧";
+        MsgPush.wxMsgPush(content);
         ok(exam);
 	}
 //	public static void initExamGrad(Long examId, List<JSONObject> subjectList){
@@ -458,6 +461,8 @@ public class WorkService extends MobileFilter {
             	XjlDwHomeworkFileBo.save(_xjlDwHomework);
             }
         }
+        String content = "<a href='http://dw201709.com/zz/mobile/W/homeworkList'>【"+homework.homeworkTitle+"】</a> 有新的作业，督促孩子完成";
+        MsgPush.wxMsgPush(content);
         ok();
 	}
 	/**

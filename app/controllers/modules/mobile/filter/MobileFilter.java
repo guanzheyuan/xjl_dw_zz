@@ -51,22 +51,28 @@ public class MobileFilter extends BaseController{
 			wxUser = sessionInfo.getWxUser();
 			if(CommonValidateUtil.isMobile(userAgent)){ //手机端获取微信用户信息
 				log.debug("当前访问是通过手机访问");
-				if(wxUser!=null&&(DateUtil.getNowDate().compareTo(DateUtil.getDateTimeNowFun(wxUser.upOpenidTime,"d",1))<=0)){
-					log.debug("当前用户:" + wxUser.nickName+","+wxUser.wxOpenId);
-					//还在有效期内
-					log.debug("还在有效期内");
-					log.debug("读取信息start");
-					Logger.info("filterDate："+DateUtil.getDateTimeNowFun(wxUser.upOpenidTime,"d",1));
-					isNeedInterface = false;
-					 wxUser = WxUser.getFindByOpenId(wxUser.wxOpenId);
-					 Logger.info("toStudent:"+wxUser.isTeacher);
-					 sessionInfo.setWxUser(wxUser);
-			 		 Cache.add(MobileFilter.getSessionKey(), sessionInfo);
-			 		log.debug("读取信息end");
-				}else{
-					log.debug("已经过期，需要重新获取");
-					//已经是三天前的数据，过期重新获取
-					isNeedInterface = true;
+				if(wxUser!=null){
+					if((DateUtil.getNowDate().compareTo(DateUtil.getDateTimeNowFun(wxUser.upOpenidTime,"d",1))<=0)){
+						log.debug("当前用户:" + wxUser.nickName+","+wxUser.wxOpenId);
+						//还在有效期内
+						log.debug("还在有效期内");
+						log.debug("读取信息start");
+						Logger.info("filterDate："+DateUtil.getDateTimeNowFun(wxUser.upOpenidTime,"d",1));
+						isNeedInterface = false;
+						 wxUser = WxUser.getFindByOpenId(wxUser.wxOpenId);
+						 Logger.info("toStudent:"+wxUser.isTeacher);
+						 sessionInfo.setWxUser(wxUser);
+				 		 Cache.add(MobileFilter.getSessionKey(), sessionInfo);
+				 		log.debug("读取信息end");
+					}else{
+						log.debug("已经过期，需要重新获取");
+						//已经是三天前的数据，过期重新获取
+						isNeedInterface = true;
+						wxUser = WxUser.getFindByOpenId(wxUser.wxOpenId);
+						 Logger.info("toStudent:"+wxUser.isTeacher);
+						 sessionInfo.setWxUser(wxUser);
+				 		 Cache.add(MobileFilter.getSessionKey(), sessionInfo);
+					}
 				}
 			}
 		}else{

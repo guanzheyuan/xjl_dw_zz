@@ -1,0 +1,35 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET     /zz                                   Application.mIndex
+
+# Home page
+GET     /zz/pc                                 LoginService.index
+GET     /zz/mobile                             LoginService.mIndex
+
+# Ignore favicon requests
+GET     /zz/favicon.ico                            404
+
+#weixin config
+GET    /zz/auth                   modules.weixin.Auth.get
+POST   /zz/auth                   modules.weixin.Auth.post
+
+# Map static resources from the /app/public folder to the /public path
+GET     /zz/public/                                staticDir:public
+
+# web images static resources from the /app/web folder to the /web path
+GET     /zz/_web_/                                staticDir:_web_
+
+# Map static resources from the /app/websit folder to the /websit path
+GET     /zz/websit/                                staticDir:websit
+GET     /zz/doc/                                   staticDir:doc
+
+# common config
+*      /zz/{module}/{service}/{action}               modules.{module}.{service}.{action}
+*      /zz/{txtfilename}.txt               Application.txt
+
+
+# Catch all
+*       /zz/{controller}/{action}                  {controller}.{action}
