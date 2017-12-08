@@ -21,6 +21,7 @@ import models.modules.mobile.XjlDwAlbum;
 import models.modules.mobile.XjlDwAlbumImage;
 import models.modules.mobile.XjlDwAlbumTemplate;
 import models.modules.mobile.XjlDwArticle;
+import models.modules.mobile.XjlDwArticleFile;
 import models.modules.mobile.XjlDwFile;
 import models.modules.mobile.XjlDwGroupBuy;
 import models.modules.mobile.XjlDwGroupBuyItem;
@@ -36,6 +37,7 @@ import play.i18n.Messages;
 import controllers.modules.mobile.bo.WxUserBo;
 import controllers.modules.mobile.bo.XjlDwAlbumBo;
 import controllers.modules.mobile.bo.XjlDwAlbumImageBo;
+import controllers.modules.mobile.bo.XjlDwAriticelFIleBo;
 import controllers.modules.mobile.bo.XjlDwArticleBo;
 import controllers.modules.mobile.bo.XjlDwGroupBuyBo;
 import controllers.modules.mobile.bo.XjlDwGroupBuyItemBo;
@@ -45,6 +47,7 @@ import controllers.modules.mobile.filter.MobileFilter;
 import controllers.modules.mobile.bo.XjlDwNoticeBo;
 import controllers.modules.mobile.bo.XjlDwNoticeFileBo;
 import utils.DateUtil;
+import utils.MsgPush;
 import utils.StringUtil;
 
 /**
@@ -125,18 +128,11 @@ public class ActivityService extends MobileFilter {
            	  XjlDwNoticeFileBo.save(xjlDwNoticeFile);
         	 }
         }
+        String content = "<a href='http://dw201709.com/zz/mobile/A/noticeList'>【"+xjlDwNotice.noticeTitle+"】</a>有新的通知通告赶紧来看看吧";
+        MsgPush.wxMsgPush(content);
         ok(_xjlDwNotice);
 
     }
-	 public static String replaceBlank(String str) {
-	        String dest = "";
-	        if (str!=null) {
-	            Pattern p = Pattern.compile("\\s*|\t|\r|\n");
-	            Matcher m = p.matcher(str);
-	            dest = m.replaceAll("");
-	        }
-	        return dest;
-	    }
 	/**
 	 * 获取美文列表
 	 */
@@ -196,7 +192,24 @@ public class ActivityService extends MobileFilter {
         if (params.get("articleState") != null) {
         	xjlDwArticle.articleState = params.get("articleState");
         }
-        ok(XjlDwArticleBo.save(xjlDwArticle));
+        XjlDwArticle _xjlDwArticle = XjlDwArticleBo.save(xjlDwArticle);
+        XjlDwArticleFile xjlDwArticleFile = null;
+        String articelFilds = params.get("articleFiles");
+        String[] articelArray = articelFilds.split(",");
+        
+        Logger.info("arrayFile:"+articelArray.length);
+        Logger.info("arrayFile:"+articelFilds);
+        if(articelFilds.length()>0){
+        	 for (String str : articelArray) {
+	           	  Logger.info("str:"+str);
+	           	 xjlDwArticleFile = new XjlDwArticleFile();
+	           	 xjlDwArticleFile.ariticleId = _xjlDwArticle.articleId;
+	           	 xjlDwArticleFile.wxOpenId = wxUser.wxOpenId;
+	           	 xjlDwArticleFile.fileId =Long.valueOf(str);
+	           	 XjlDwAriticelFIleBo.save(xjlDwArticleFile);
+        	 }
+        }
+        ok(_xjlDwArticle);
 	}
 	/**
 	 * 查询团购条目列表
@@ -375,7 +388,8 @@ public class ActivityService extends MobileFilter {
         	}
 	
         }
-
+        String content = "<a href='http://dw201709.com/zz/mobile/A/groupList'>【"+xjlDwGroupBuy.groupBuyTitle+"】</a>有新的团购赶紧来抢购吧";
+        MsgPush.wxMsgPush(content);
         ok(xjlDwGroupBuy);
 	}
 	/**
@@ -528,6 +542,8 @@ public class ActivityService extends MobileFilter {
         if (params.get("albumTitle") != null) {
         	album.albumTitle = params.get("albumTitle");
         }
+        String content = "<a href='http://dw201709.com/zz/mobile/A/albumList'>【"+album.albumTitle+"】</a>有新的相册,赶紧来看看孩子的图片吧";
+        MsgPush.wxMsgPush(content);
         ok(XjlDwAlbumBo.save(album));
 	}
 	 public static void saveAlbumImage(){

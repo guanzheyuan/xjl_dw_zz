@@ -1,8 +1,10 @@
 package controllers.modules.mobile;
 import models.modules.mobile.WxUser;
 import models.modules.mobile.XjlDwArticle;
+import models.modules.mobile.XjlDwArticleFile;
 import models.modules.mobile.XjlDwFile;
 import models.modules.mobile.XjlDwGroupBuy;
+import models.modules.mobile.XjlDwHomeworkFile;
 import models.modules.mobile.XjlDwNotice;
 import models.modules.mobile.XjlDwNoticeFile;
 import models.modules.mobile.XjlDwWxClass;
@@ -72,26 +74,33 @@ public class A extends MobileFilter {
     }
     
     public static void queryArticleDetail(){
+    	int pageIndex = StringUtil.getInteger(params.get("PAGE_INDEX"), 1);
+		int pageSize = StringUtil.getInteger(params.get("PAGE_SIZE"), 100);
     	XjlDwArticle article = XjlDwArticle.findById(Long.parseLong(params.get("articleId")));
+    	List<XjlDwArticleFile> file = (List<XjlDwArticleFile>) XjlDwArticleFile.queryArticleFile(article.articleId, pageIndex, pageSize).get("data");
+    	article.fileList = file;
         ok(article);
     }
     public static void articleDetail() {
     	XjlDwArticle article = XjlDwArticle.findById(params.get("articleId", Long.class));
-        renderArgs.put("detail", article);
+    	WxUser wxUser =  getWXUser();
+		renderArgs.put("wxUser",wxUser);
+    	renderArgs.put("detail", article);
         renderArgs.put("articleId",params.get("articleId", Long.class));
         renderArgs.put("type",params.get("type"));
         render("modules/xjldw/mobile/activity/article_detail.html");
     }
     public static void articleAdd() {
 		XjlDwArticle article=null;
+		WxUser wxUser =  getWXUser();
 		if(params.get("articleId")!= null) {
 			article = XjlDwArticle.findById(params.get("articleId", Long.class));
 		}else{
-			WxUser wxUser = getWXUser();
 			article=new XjlDwArticle();
 			article.articleAuthor=wxUser.nickName;
 			article.articleState="0";
 		}
+		renderArgs.put("wxUser",wxUser);
 		renderArgs.put("article", article);
         render("modules/xjldw/mobile/activity/article_add.html");
     }
